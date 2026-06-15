@@ -11,6 +11,9 @@ nu = 1
 mu = 1 
 k_0 = 1 
 di = 1
+
+U_gaussian = 30*(10**(3))
+B_gaussian = 10*(10**(-9))
 #Parametres de modelisation 
 
 N = 25 #Exposant du k_max
@@ -30,7 +33,10 @@ Hall = 1 # 0 pour enlever effet Hall
 
 K = [k_0*(lmbd**i) for i in range(N)]
 
-
+def CI(V,B) : 
+    for i in range(N):
+        V[0][i] = U_gaussian*np.sqrt(2*np.pi)*np.random.normal(scale = 8*K[i])/(2*K[i])
+        B[0][i] = B_gaussian*np.sqrt(2*np.pi)*np.random.normal(scale = 8*K[i])/(2*K[i])
 
 def lissage_lineaire ( V, B ) : 
     for i in range (P):
