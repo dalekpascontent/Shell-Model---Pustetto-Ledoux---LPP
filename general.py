@@ -137,8 +137,18 @@ def show_inv (V : list, B : list ):
     axs[0].plot(l_T,d_E, label = " Dérivée de E (J/s) ")
     axs[1].plot(l_T,d_Hm, 'o', label = " Dérivée de Hm (J.m/s) ")
     axs[2].plot(l_T,d_Hh, '+', label = " Dérivée de Hh (J.m/S) ")
-    plt.figure()
+    plt.label()
     plt.show()
-    
+
+def show_E_k(V,B):
+    plt.figure()
+    plt.plot(k,moy_E_k(V,B))
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel("Wavenumber")
+    plt.ylabel("Spectral Energy (J.m/s)")
+    plt.show()
+
+
 print(U)
 show_inv(U, B)
