@@ -3,37 +3,35 @@ import numpy as np
 import matplotlib.pyplot as plt 
 
 
-##PARAMETRES DU PROBLEME
-
-# Parametres physiques : Unité U.S.I 
-U_gaussian = 30*(10**(3))
-B_gaussian = 10*(10**(-9))
 #Parametres de modelisation 
 
-N = 12 #Exposant du k_max
+N = 23 #Exposant du k_max
 
 P = int(1e5) #Indice de discretisation du temps
 T = 100 #Temps total de modélisation
 h = T/P
+k0 = 0.04
+di = 0
+k = np.array([k0*(2**i) for i in range(N)])
 
 
-def CI(V,B) : 
+def CI():
+    V = np.zeros(N, dtype=complex)
+    B = np.zeros(N, dtype=complex)
+    sigma_k = k0  # largeur de la gaussienne en k, centrée sur k0
     for i in range(N):
-        V[0][i] = U_gaussian*np.sqrt(2*np.pi)*np.random.normal(scale = 8*k[i])/(2*k[i])
-        B[0][i] = B_gaussian*np.sqrt(2*np.pi)*np.random.normal(scale = 8*k[i])/(2*k[i])
+        enveloppe = np.exp(-(k[i] - k0)**2 / (4 * sigma_k**2))  # gaussienne en k
+        phase     = np.exp(1j * 2 * np.pi * np.random.rand())    # phase aléatoire
+        V[i]      = enveloppe * phase   # amplitude O(1), pic à k0
     return V, B
 
 
 ############## Partie intégration ###############
 
-k0 = 0.04
-v0 = np.ones(N, dtype = complex)
-b0 = np.zeros(N, dtype = complex)
-di = 0
-k = np.array([k0*(2**i) for i in range(N)])
+v0, b0 = CI()
 dt = T/P
-nu = 1
-eta = 1
+nu = 1e-13
+eta = 1e-13
 
 
 U = np.zeros((P, N), dtype=complex)
@@ -70,8 +68,8 @@ def NL(V, B):
     return NLV, NLB
 
 
-expV = np.exp(-nu*(k**2)*dt) #lissage pour V 
-expB = np.exp(-eta*(k**2)*dt)
+expV = np.exp(-nu*(k**4)*dt) #lissage pour V 
+expB = np.exp(-eta*(k**4)*dt)
 
 #initialisation (méthode d'Euler pour calculer le terme au temps t1)
 U[0] = v0
@@ -109,10 +107,10 @@ def invariant(V, B):
             mod2_V = np.abs(V[i][j])**2   
             mod2_B = np.abs(B[i][j])**2  
             croise = (np.conj(V[i][j]) * B[i][j]).real  
-
             l_E[i]  += (mod2_V + mod2_B) / 2
             l_Hm[i] += ((-1)**(j+1)) * mod2_B / (2 * k[j])
             l_Hh[i] += ((-1)**(j+1) * di**2 * k[j] * mod2_V + di * 2 * croise) / 2
+            
     d_E = np.gradient(l_E,h)
     d_Hm = np.gradient(l_Hm,h)
     d_Hh = np.gradient(l_Hh,h)
@@ -125,6 +123,16 @@ def invariant(V, B):
     return [l_E,l_Hm,l_Hh,d_E,d_Hm,d_Hh,moy_dE,moy_dHm,moy_dHh,l_T]
 
 
+def E_kn(V, B):
+    Ekn = np.zeros((P, N))
+    for i in range(P):
+        for j in range(N):
+            mod2_V = np.abs(V[i][j])**2   
+            mod2_B = np.abs(B[i][j])**2 
+            temp = (mod2_V + mod2_B) / 2
+            Ekn[i][j] = temp
+    return Ekn
+
 def show_inv (V : list, B : list ):
     
     l_E, l_Hm, l_Hh, d_E, d_Hm, d_Hh, moy_dE, moy_dHm, moy_dHh, l_T = invariant(V, B)
@@ -133,7 +141,7 @@ def show_inv (V : list, B : list ):
     print("Moyenne de la derivée de Hm :", moy_dHm,"J.m/s")
     print("Moyenne de la derivée de Hh :", moy_dHh,"J.m/s")
     
-    fig, axs = plt.subplots(3, sharex=True, sharey=True)
+    fig, axs = plt.subplots(3, sharex=True)
     axs[0].plot(l_T,d_E, label = " Dérivée de E (J/s) ")
     axs[1].plot(l_T,d_Hm, 'o', label = " Dérivée de Hm (J.m/s) ")
     axs[2].plot(l_T,d_Hh, '+', label = " Dérivée de Hh (J.m/S) ")
@@ -141,13 +149,13 @@ def show_inv (V : list, B : list ):
     plt.show()
 
 def moy_E_k(V,B):
-    E_k = invariant(V,B)[6][10]
-    moy_E_k = [ np.mean(E_k[:][i]) for i in range(N)]
+    E_k = E_kn(V,B)
+    moy_E_k = np.mean(E_k, axis=0)
     return moy_E_k
 
 def show_E_k(V,B):
     plt.figure()
-    plt.plot(k,moy_E_k(V,B))
+    plt.plot(k,k**(5/3)*moy_E_k(V,B), 'x')
     plt.xscale('log')
     plt.yscale('log')
     plt.xlabel("Wavenumber")
@@ -155,3 +163,4 @@ def show_E_k(V,B):
     plt.show()
 
 show_inv(U, B)
+show_E_k(U, B)
