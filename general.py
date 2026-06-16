@@ -137,7 +137,7 @@ def show_inv (V : list, B : list ):
     axs[0].plot(l_T,d_E, label = " Dérivée de E (J/s) ")
     axs[1].plot(l_T,d_Hm, 'o', label = " Dérivée de Hm (J.m/s) ")
     axs[2].plot(l_T,d_Hh, '+', label = " Dérivée de Hh (J.m/S) ")
-    plt.label()
+    plt.legend()
     plt.show()
 
 def moy_E_k(V,B):
