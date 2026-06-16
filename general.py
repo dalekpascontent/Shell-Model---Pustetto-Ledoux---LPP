@@ -193,5 +193,24 @@ def plot_multi_fit (X,Y,count):
     plt.plot(X, Y, ".")
     plt.plot(px, py, "-or");
 
+
+def fit_simple(X,Y):
+    x = 10**4
+    difference_array = np.absolute(X-x)
+    index = difference_array.argmin()
+    X_bis = X[:index]
+    k_bis = k[:index]
+    X_log = np.log10(X_bis)
+    k_log = np.log10(k_bis)
+    coef, cov  = np.polyfit (k_log,X_log, deg = 1, cov = True )
+    
+    k_fit = np.linespace(k_log[1],k_log[-1],10000)
+    
+    plt.figure()
+    plt.plot(k_log,X_log, label = "Model")
+    plt.plot(k_fit,coef[0]*k_fit + coef[1], label = "Linear reg")
+    plt.legend()
+    plt.show()
+
 show_inv(U, B)
 show_E_k(U, B)
