@@ -154,6 +154,4 @@ def show_E_k(V,B):
     plt.ylabel("Spectral Energy (J.m/s)")
     plt.show()
 
-
-print(U)
 show_inv(U, B)
