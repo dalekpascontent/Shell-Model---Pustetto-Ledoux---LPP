@@ -140,6 +140,11 @@ def show_inv (V : list, B : list ):
     plt.label()
     plt.show()
 
+def moy_E_k(V,B):
+    E_k = invariant(V,B)[6][10]
+    moy_E_k = [ np.mean(E_k[:][i]) for i in range(N)]
+    return moy_E_k
+
 def show_E_k(V,B):
     plt.figure()
     plt.plot(k,moy_E_k(V,B))
