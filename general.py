@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt 
 from scipy import optimize
 
+
+
 #Parametres de modelisation 
 
 N = 23 #Exposant du k_max
@@ -21,8 +23,9 @@ def CI():
     sigma_k = k0  # largeur de la gaussienne en k, centrée sur k0
     for i in range(N):
         enveloppe = np.exp(-(k[i] - k0)**2 / (4 * sigma_k**2))  # gaussienne en k
-        phase     = np.exp(1j * 2 * np.pi * np.random.rand())    # phase aléatoire
-        V[i]      = enveloppe * phase   # amplitude O(1), pic à k0
+        phase = np.exp(1j * 2 * np.pi * np.random.rand())    # phase aléatoire
+        V[i] = enveloppe * phase   # pic à k0
+        B[i] = enveloppe * phase   
     return V, B
 
 
@@ -72,27 +75,33 @@ expV = np.exp(-nu*(k**4)*dt) #lissage pour V
 expB = np.exp(-eta*(k**4)*dt)
 
 #initialisation (méthode d'Euler pour calculer le terme au temps t1)
-U[0] = v0
-B[0] = b0
+def integ(v0, b0):
+    U = np.zeros((P, N), dtype=complex)
+    B = np.zeros((P, N), dtype=complex)
+    U[0] = v0
+    B[0] = b0
 
-NLV, NLB = NL(v0, b0)
+    NLV, NLB = NL(v0, b0)
 
-Vmain = v0*expV + dt*NLV*expV #euler
-Bmain = b0*expB + dt*NLB*expB
-U[1] = Vmain
-B[1] = Bmain
-fapV, fapB = NLV, NLB
+    Vmain = v0*expV + dt*NLV*expV #euler
+    Bmain = b0*expB + dt*NLB*expB
+    U[1] = Vmain
+    B[1] = Bmain
+    fapV, fapB = NLV, NLB
 
-for i in range(2, P):
-    NLV, NLB = NL(Vmain, Bmain)
-    V_2 = Vmain*expV + dt*(3/2*NLV*expV - 1/2*fapV*expV) 
-    B_2 = Bmain*expB + dt*(3/2*NLB*expB - 1/2*fapB*expB)
-    fapV, fapB = NLV, NLB  #(f(tp, ap), on l'avait calculé, on le sauvegarde pour le prochain calcul
-    Vmain = V_2
-    Bmain = B_2
-    U[i] = Vmain   # on enregistre les valeurs au cours du temps
-    B[i] = Bmain
+    for i in range(2, P):
+        NLV, NLB = NL(Vmain, Bmain)
+        V_2 = Vmain*expV + dt*(3/2*NLV*expV - 1/2*fapV*expV) 
+        B_2 = Bmain*expB + dt*(3/2*NLB*expB - 1/2*fapB*expB)
+        fapV, fapB = NLV, NLB  #(f(tp, ap), on l'avait calculé, on le sauvegarde pour le prochain calcul
+        Vmain = V_2
+        Bmain = B_2
+        U[i] = Vmain   # on enregistre les valeurs au cours du temps
+        B[i] = Bmain
+    return U, B
 
+a = integ(v0, b0)
+U, B = a
 
 ################# Partie invariant ################
 
@@ -146,7 +155,6 @@ def show_inv (V : list, B : list ):
     axs[1].plot(l_T,d_Hm, 'o', label = " Dérivée de Hm (J.m/s) ")
     axs[2].plot(l_T,d_Hh, '+', label = " Dérivée de Hh (J.m/S) ")
     plt.legend()
-    plt.show()
 
 def moy_E_k(V,B):
     E_k = E_kn(V,B)
@@ -155,43 +163,11 @@ def moy_E_k(V,B):
 
 def show_E_k(V,B):
     plt.figure()
-    plt.plot(k,k**(5/3)*moy_E_k(V,B), 'x')
+    plt.plot(k,moy_E_k(V,B), 'x')
     plt.xscale('log')
     plt.yscale('log')
     plt.xlabel("Wavenumber")
     plt.ylabel("Spectral Energy (J.m/s)")
-    plt.show()
-
-
-def segments_fit(X, Y, count):
-    xmin = X.min()
-    xmax = X.max()
-
-    seg = np.full(count - 1, (xmax - xmin) / count)
-
-    px_init = np.r_[np.r_[xmin, seg].cumsum(), xmax]
-    py_init = np.array([Y[np.abs(X - x) < (xmax - xmin) * 0.01].mean() for x in px_init])
-
-    def func(p):
-        seg = p[:count - 1]
-        py = p[count - 1:]
-        px = np.r_[np.r_[xmin, seg].cumsum(), xmax]
-        return px, py
-
-    def err(p):
-        px, py = func(p)
-        Y2 = np.interp(X, px, py)
-        return np.mean((Y - Y2)**2)
-
-    r = optimize.minimize(err, x0=np.r_[seg, py_init], method='Nelder-Mead')
-    return func(r.x)
-
-
-def plot_multi_fit (X,Y,count):
-    px, py = segments_fit(X, Y, count)
-
-    plt.plot(X, Y, ".")
-    plt.plot(px, py, "-or");
 
 
 def fit_simple(X,Y):
@@ -210,7 +186,3 @@ def fit_simple(X,Y):
     plt.plot(k_log,X_log, label = "Model")
     plt.plot(k_fit,coef[0]*k_fit + coef[1], label = "Linear reg")
     plt.legend()
-    plt.show()
-
-show_inv(U, B)
-show_E_k(U, B)
