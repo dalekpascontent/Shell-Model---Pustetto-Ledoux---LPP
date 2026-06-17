@@ -1,0 +1,29 @@
+import general as g
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+
+N = 23 #Exposant du k_max
+
+P = int(1e5) #Indice de discretisation du temps
+T = 100 #Temps total de modélisation
+h = T/P
+k0 = 0.04
+di = 0
+k = np.array([k0*(2**i) for i in range(N)])
+
+dt = T/P
+nu = 1e-13
+eta = 0
+
+expV = np.exp(-nu*(k**4)*dt) #lissage pour V 
+expB = np.exp(-eta*(k**4)*dt)
+
+v0, b0 = g.CI()
+U1, B1 = g.integ(v0, b0)
+
+g.show_E_k(U1, B1)
+g.show_inv(U1, B1)
+
+plt.show()
