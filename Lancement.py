@@ -7,7 +7,7 @@ from scipy import optimize
 
 T = 100 #Temps total de modélisation
 
-N = 2
+N = 20
 P = int(1e5)
 k0 = 0.01
 k = np.array([k0*(2**i) for i in range(N)])
@@ -17,7 +17,7 @@ nu = 1e-13
 eta = 1e-13
 parametre = [N, P, k0, k, dt, di, nu, eta] #[N, P, k0, k, dt, di, nu, eta]
 
-Umoy = 3e2
+Umoy = 1
 Bmoy = 0
 
 expV = np.exp(-nu*(k**4)*dt) #lissage pour V 
