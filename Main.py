@@ -1,15 +1,15 @@
 
 def NL(V, B, parametre):
-    N, P, k0, k, dt, di, nu, eta = parametre
+    N, P, k0, k, dt, Umoy, Bmoy, di, nu, eta = parametre
 
     V_grand = np.zeros(N+4, dtype = complex)
     B_grand = np.zeros(N+4, dtype = complex)
     V_grand[2: N+2] = V  # On a donc V_grand = [0, 0, V, 0, 0]
     B_grand[2: N+2] = B
 
-    V_grand[3: N+3] = V[N-1]**2:V[N-2]
+    V_grand[3: N+3] = V[N-1]**2/V[N-2]
     Vn1 = V_grand[3: N+3] #Vn+1
-    V_grand[4: N+4] = Vn1*2:V[N-1]
+    V_grand[4: N+4] = Vn1**2/V[N-1]
     Vn2 = V_grand[4: N+4] #Vn+2
     
     V_grand[1: N+1] = V[0]**2/V[1]
