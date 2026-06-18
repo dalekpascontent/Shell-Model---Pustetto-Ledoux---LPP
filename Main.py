@@ -16,6 +16,11 @@ def NL(V, B, parametre):
     Vm1 = V_grand[1: N+1] #Vn-1
     Vm2 = V_grand[0: N] #Vn-2
 
+    B_grand[N+2] = B[N-1]
+    B_grand[N+3] = B[N-1]
+    B_grand[0] = B[0]
+    B_grand[1] = B[0]
+
     Bn1 = B_grand[3: N+3]
     Bn2 = B_grand[4: N+4]
     Bm1 = B_grand[1: N+1]
