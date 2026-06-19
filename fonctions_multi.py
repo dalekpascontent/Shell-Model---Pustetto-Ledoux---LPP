@@ -9,9 +9,9 @@ def CI(parametre):
     N, P, k0, k, dt, Umoy, Bmoy, di, nu, eta = parametre
     V = np.zeros(N, dtype=complex)
     B = np.zeros(N, dtype=complex)
-    sigma_k = k0  # largeur de la gaussienne en k, centrée sur k0
+    sigma_k = 1  # largeur de la gaussienne en n indice du kn
     for i in range(N):
-        enveloppe = np.exp(-(k[i] - 0.04)**2 / (4 * sigma_k**2))  # gaussienne en k
+        enveloppe = np.exp(-((i-2)**2) / (2 * sigma_k**2))  # gaussienne en n
         phase = np.exp(1j * 2 * np.pi * np.random.rand())    # phase aléatoire
         V[i] = Umoy*enveloppe * phase   # pic à k0
         B[i] = Bmoy*enveloppe * phase   
@@ -73,8 +73,8 @@ def integ(v0, b0, parametre, expV, expB):
 
     for i in range(2, P):
         NLV, NLB = NL(Vmain, Bmain, parametre)
-        V_2 = Vmain*expV + dt*(3/2*NLV*expV - 1/2*fapV*expV) 
-        B_2 = Bmain*expB + dt*(3/2*NLB*expB - 1/2*fapB*expB)
+        V_2 = Vmain*expV + dt*(3/2*NLV*expV - 1/2*fapV*expV**2) 
+        B_2 = Bmain*expB + dt*(3/2*NLB*expB - 1/2*fapB*expB**2)
         fapV, fapB = NLV, NLB  #(f(tp, ap), on l'avait calculé, on le sauvegarde pour le prochain calcul
         Vmain = V_2
         Bmain = B_2
@@ -107,14 +107,14 @@ def invariant(V, B, parametre):
     l_Hm = np.zeros(P)
     l_Hh = np.zeros(P)
 
-    for i in range(P):
-        for j in range(N):
-            mod2_V = np.abs(V[i][j])**2   
-            mod2_B = np.abs(B[i][j])**2  
-            croise = (np.conj(V[i][j]) * B[i][j]).real  
-            l_E[i]  += (mod2_V + mod2_B) / 2
-            l_Hm[i] += ((-1)**(j+1)) * mod2_B / (2 * k[j])
-            l_Hh[i] += ((-1)**(j+1) * di**2 * k[j] * mod2_V + di * 2 * croise) / 2
+    mod2_V = np.abs(V)**2
+    mod2_B = np.abs(B)**2
+    croise = (np.conj(V) * B).real
+    signe = np.array([(-1)**(j+1) for j in range(N)])
+    
+    l_E  = np.sum((mod2_V + mod2_B) / 2, axis=1)   # (Somme sur l'axe 1 pour obtenir une taille P, l'axe 1 correspond anciennement a la somme sur j)
+    l_Hm = np.sum(signe * mod2_B / (2 * k), axis=1)
+    l_Hh = np.sum((signe * di**2 * k * mod2_V + di * 2 * croise) / 2, axis=1)
             
     d_E = np.gradient(l_E,dt)
     d_Hm = np.gradient(l_Hm,dt)
@@ -128,17 +128,34 @@ def invariant(V, B, parametre):
     return [l_E,l_Hm,l_Hh,d_E,d_Hm,d_Hh,moy_dE,moy_dHm,moy_dHh,l_T]
 
 
+########### Partie Energie Ek ################
+
 def E_kn(V, B, parametre):
     N, P, k0, k, dt, Umoy, Bmoy, di, nu, eta = parametre
 
     Ekn = np.zeros((P, N))
-    for i in range(P):
-        for j in range(N):
-            mod2_V = np.abs(V[i][j])**2   
-            mod2_B = np.abs(B[i][j])**2 
-            temp = (mod2_V + mod2_B) / 2
-            Ekn[i][j] = temp
+    mod2_V = np.abs(V)**2   
+    mod2_B = np.abs(B)**2 
+    Ekn = (mod2_V + mod2_B) / 2
+
     return Ekn
+
+
+def moy_E_k(V, B, parametre):
+    N, P, k0, k, dt, Umoy, Bmoy, di, nu, eta = parametre
+
+    Ekn = E_kn(V, B, parametre)
+    E_t = np.sum(Ekn, axis=1)
+    dE  = np.abs(np.gradient(E_t, dt))
+    casc = np.argmax(dE > 1e-3*E_t[0]) #début de la cascade d'energie, on a quitté la zone laminaire
+
+    debut = casc + int((P-casc)/10) # on avance un peu pour ne pas avoir la transition
+    fin = P
+    moy_E_k_zone = np.mean(Ekn[debut:fin], axis=0) # on moyenne sur cette zone temporelle
+
+    return moy_E_k_zone
+
+############# Partie d'affichage ##################
 
 def show_inv (V : list, B : list, parametre ):
     
@@ -171,11 +188,6 @@ def show_inv_multi(simulations, labels):
     fig.tight_layout()
 
 
-def moy_E_k(V,B, parametre):
-    E_k = E_kn(V,B, parametre)
-    moy_E_k = np.mean(E_k, axis=0)
-    return moy_E_k
-
 def show_E_k(V,B, parametre):
     k = parametre[3]
 
@@ -190,29 +202,20 @@ def show_E_k_multi(simulations, labels):
     plt.figure()
     for (V, B, parametre), label in zip(simulations, labels):
         k = parametre[3]
-        plt.plot(k, moy_E_k(V, B, parametre), label=label, markersize=4)
+        Ek = moy_E_k(V, B, parametre)
+        plt.plot(k, Ek, label=label, markersize=4)
+        
+        dEdk = np.abs(np.gradient(Ek, k)) 
+        diss = np.argmax(dEdk < 1e-20)-2  #permet d'obtenir le moment on la courbe s'éffondre sans loi de puissance
+        k_zone = k[1:diss] # permet d'isoler la zone de k pour la régression
+        a, b = np.polyfit(np.log10(k_zone), np.log10(Ek[1:diss]), deg=1)
+        E_fit = 10**(a * np.log10(k_zone) + b)
+        plt.plot(k_zone, E_fit, '--', label=f"Fit (pente = {a:.2f})")
 
     plt.xscale('log')
     plt.yscale('log')
     plt.xlabel("Wavenumber")
     plt.ylabel("Spectral Energy (J.m/s)")
     plt.title("Comparaison des spectres d'énergie entre régimes")
+    plt.ylim(10**-30, 10**2)
     plt.legend(fontsize=8)
-
-def fit_simple(X,Y, parametre):
-    k = parametre[3]
-    x = 10**4
-    difference_array = np.absolute(X-x)
-    index = difference_array.argmin()
-    X_bis = X[:index]
-    k_bis = k[:index]
-    X_log = np.log10(X_bis)
-    k_log = np.log10(k_bis)
-    coef, cov  = np.polyfit (k_log,X_log, deg = 1, cov = True )
-    
-    k_fit = np.linespace(k_log[1],k_log[-1],10000)
-    
-    plt.figure()
-    plt.plot(k_log,X_log, label = "Model")
-    plt.plot(k_fit,coef[0]*k_fit + coef[1], label = "Linear reg")
-    plt.legend()
