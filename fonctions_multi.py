@@ -80,6 +80,7 @@ def integ(v0, b0, parametre, expV, expB):
         Bmain = B_2
         U[i] = Vmain   # on enregistre les valeurs au cours du temps
         B[i] = Bmain
+
     return U, B
 
 
@@ -109,12 +110,13 @@ def invariant(V, B, parametre):
 
     mod2_V = np.abs(V)**2
     mod2_B = np.abs(B)**2
-    croise = (np.conj(V) * B).real
+    croise1 = (np.conj(V) * B).real
+    croise2 = (np.conj(B) * V).real
     signe = np.array([(-1)**(j+1) for j in range(N)])
     
     l_E  = np.sum((mod2_V + mod2_B) / 2, axis=1)   # (Somme sur l'axe 1 pour obtenir une taille P, l'axe 1 correspond anciennement a la somme sur j)
     l_Hm = np.sum(signe * mod2_B / (2 * k), axis=1)
-    l_Hh = np.sum((signe * di**2 * k * mod2_V + di * 2 * croise) / 2, axis=1)
+    l_Hh = np.sum((signe * di**2 * k * mod2_V + di * (croise1 + croise2)) / 2, axis=1)
             
     d_E = np.gradient(l_E,dt)
     d_Hm = np.gradient(l_Hm,dt)
@@ -125,18 +127,19 @@ def invariant(V, B, parametre):
     moy_dHh = np.mean(d_Hh)
     
     l_T = [ dt*i for i in range(P)]
+
     return [l_E,l_Hm,l_Hh,d_E,d_Hm,d_Hh,moy_dE,moy_dHm,moy_dHh,l_T]
 
 
 ########### Partie Energie Ek ################
 
-def E_kn(V, B, parametre):
+def E_kn(V, B, parametre): #sert a calculer l'energie totale. 
     N, P, k0, k, dt, Umoy, Bmoy, di, nu, eta = parametre
 
     Ekn = np.zeros((P, N))
     mod2_V = np.abs(V)**2   
     mod2_B = np.abs(B)**2 
-    Ekn = (mod2_V + mod2_B) / 2
+    Ekn = (mod2_V + mod2_B) / (2*k) # on divise par k pour avoir l'energie E(k) et pas E(kn) (on veut l'intégrale)
 
     return Ekn
 
@@ -206,9 +209,9 @@ def show_E_k_multi(simulations, labels):
         plt.plot(k, Ek, label=label, markersize=4)
         
         dEdk = np.abs(np.gradient(Ek, k)) 
-        diss = np.argmax(dEdk < 1e-20)-2  #permet d'obtenir le moment on la courbe s'éffondre sans loi de puissance
-        k_zone = k[1:diss] # permet d'isoler la zone de k pour la régression
-        a, b = np.polyfit(np.log10(k_zone), np.log10(Ek[1:diss]), deg=1)
+        diss = np.argmax(dEdk < 1e-20)-3 #permet d'obtenir le moment on la courbe s'éffondre sans loi de puissance
+        k_zone = k[2:diss] # permet d'isoler la zone de k pour la régression
+        a, b = np.polyfit(np.log10(k_zone), np.log10(Ek[2:diss]), deg=1)
         E_fit = 10**(a * np.log10(k_zone) + b)
         plt.plot(k_zone, E_fit, '--', label=f"Fit (pente = {a:.2f})")
 
