@@ -1,35 +1,27 @@
-def NL(V, B, parametre):
+def moy_E_k(V, B, parametre):
     N, P, k0, k, dt, Umoy, Bmoy, di, nu, eta = parametre
 
-    V_grand = np.zeros(N+4, dtype = complex)
-    B_grand = np.zeros(N+4, dtype = complex)
-    V_grand[2: N+2] = V  # On a donc V_grand = [0, 0, V, 0, 0]
-    B_grand[2: N+2] = B
+    Ekn = E_kn(V, B, parametre)
+    E_t = np.sum(Ekn, axis=1)
+    dE  = np.abs(np.gradient(E_t, dt))
+    casc = np.argmax(dE > 1e-3*E_t[0]) #début de la cascade d'energie, on a quitté la zone laminaire
 
-    V_grand[N+2] = V[N-1]
-    V_grand[N+3] = V[N-1]
-    V_grand[0] = V[0]
-    V_grand[1] = V[0]
+    debut = casc + int((P-casc)/10) # on avance un peu pour ne pas avoir la transition
+    fin = P
+    moy_E_k_zone = np.mean(Ekn[debut:fin], axis=0) # on moyenne sur cette zone temporelle
 
-    Vn1 = V_grand[3: N+3] #Vn+1
-    Vn2 = V_grand[4: N+4] #Vn+2
-    Vm1 = V_grand[1: N+1] #Vn-1
-    Vm2 = V_grand[0: N] #Vn-2
+    return moy_E_k_zone
 
-    B_grand[N+2] = B[N-1]
-    B_grand[N+3] = B[N-1]
-    B_grand[0] = B[0]
-    B_grand[1] = B[0]
-
-    Bn1 = B_grand[3: N+3]
-    Bn2 = B_grand[4: N+4]
-    Bm1 = B_grand[1: N+1]
-    Bm2 = B_grand[0: N]
-
-    NLV = 1j*k*np.conj(Vn1*Vn2 - Bn1*Bn2 -1/4*(Vm1*Vn1 - Bm1*Bn1) -1/8*(Vm1*Vm2 -Bm1*Bm2)) # calcul de la première equatiob (4) pour les N couches (a temps fixé)
-
-    signe = np.array([(-1)**(i+1) for i in range(N)]) # pour avoir le (-1)**n
-    terme1 = 1j*k/6*np.conj( (Vn1*Bn2 - Bn1*Vn2) + (Vm1*Bn1 - Bm1*Vn1) + (Vm2*Bm1 - Bm2*Vm1)) # calcul de la deuxième equation (5) pour les N couches (a temps fixé)
-    terme2 = signe*di*1j*k**2*np.conj(Bn1*Bn2 - Bm1*Bn1/4 - Bm2*Bm1/8)
-    NLB = terme1 + terme2
-    return NLV, NLB
+def liss_E(V,B,parametre):
+    moy_E_k = moy_E_k(V,B,parametre)
+    D = len(moy_E_k)
+    liss_E_k = np.zeros(D)
+    for i in range (D):
+        if (i = D-1 or i = 0 ):
+            liss_E_k[i] = moy_E_k[i]
+        else :
+            liss_E_k[i] = (moy_E_k[i+1] + moy_E_k[i-1] + moy_E_k[i])/3
+            #liss_E_k[i] = (moy_E_k[i+1] * moy_E_k[i-1] * moy_E_k[i])**(1/3)
+    return liss_E_k[i]
+        
+        
