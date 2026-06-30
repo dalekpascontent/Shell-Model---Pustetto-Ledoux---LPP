@@ -13,15 +13,15 @@ def moy_E_k(V, B, parametre):
     return moy_E_k_zone
 
 def liss_E(V,B,parametre):
-    moy_E_k = moy_E_k(V,B,parametre)
-    D = len(moy_E_k)
+    moyEk = moy_E_k(V,B,parametre)
+    D = len(moyEk)
     liss_E_k = np.zeros(D)
     for i in range (D):
         if (i = D-1 or i = 0 ):
-            liss_E_k[i] = moy_E_k[i]
+            liss_E_k[i] = moyEk[i]
         else :
-            liss_E_k[i] = (moy_E_k[i+1] + moy_E_k[i-1] + moy_E_k[i])/3
-            #liss_E_k[i] = (moy_E_k[i+1] * moy_E_k[i-1] * moy_E_k[i])**(1/3)
-    return liss_E_k[i]
+            #liss_E_k[i] = (moyEk[i+1] + moyEk[i-1] + moyEk[i])/3
+            liss_E_k[i] = (moyEk[i+1] * moyEk[i-1] * moyEk[i])**(1/3)
+    return liss_E_k
         
         
