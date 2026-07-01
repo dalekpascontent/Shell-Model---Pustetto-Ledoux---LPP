@@ -251,6 +251,16 @@ def moy_E(V, B, parametre, l_T, a):
 
     return moy_E_k_zone
 
+def liss_E(moyEk):
+    D = len(moyEk)
+    liss_E_k = np.zeros(D)
+    for i in range (D):
+        if (i == D-1 or i == 0 ):
+            liss_E_k[i] = moyEk[i]
+        else :
+            liss_E_k[i] = (moyEk[i+1] * moyEk[i-1] * moyEk[i])**(1/3)
+    return liss_E_k
+
 ############## Affichage #############
 
 def auto_label(cas, para):
@@ -258,8 +268,9 @@ def auto_label(cas, para):
         "di": f"$d_i={para["di"]}$", 
         "nu": f"$\\nu={para["nu"]}$",
         "eta": f"$\\eta={para["eta"]}$",
-        "centre": f"$\\centre={para["i"]}$",
-        "N": f"$\\N={para["N"]}$"
+        "i": f"$centre={para["i"]}$",
+        "N": f"$N={para["N"]}$",
+        "mur": f"$mur={para["mur"]}$"
     }
     label = [cas] + [extrait[clee] for clee in extrait if clee in para]
     return ", ".join(label)  # voir doc python pour le fonctionnement de .join (long a expliquer)
@@ -281,13 +292,15 @@ def show_Inv(simulations, labels):
     fig.suptitle("Comparaison des invariants entre régimes (énergie, hélicité magnétique et hybride)")
     fig.tight_layout()
 
-def show_spectre(simulations, labels, pentes, mur):
+def show_spectre(simulations, labels, pentes, mure):
     plt.figure()
-    for (V, B, parametre, l_T), label, pente in zip(simulations, labels, pentes):
+    for (V, B, parametre, l_T), label, pente, mur in zip(simulations, labels, pentes, mure):
         k = parametre[2]
         Ek = moy_E(V, B, parametre, l_T, mur)
-        plt.plot(k, Ek*k**(-pente), label=label, markersize=4)
-        plt.plot(k, [np.mean(Ek[1:10]) for i in range(len(k))], '--')
+        Ek = liss_E(Ek)
+        y = Ek*k**(-pente)
+        plt.plot(k, y, label=label, markersize=4)
+        plt.plot(k, [np.mean(y[10:15]) for i in range(len(k))], '--')
 
     plt.xscale('log')
     plt.yscale('log')
@@ -301,6 +314,8 @@ def show_dt(liste, labels):
     plt.figure()
     for (dt, temps), label in zip(liste, labels):
         plt.plot(temps, dt, label=label, markersize=4)
+        plt.xscale('log')
+        plt.yscale('log')
         plt.xlabel("t")
         plt.ylabel("pas d'intégration dt")
         plt.title("Evolution du pas d'intégration au cours du temps")
