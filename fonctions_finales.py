@@ -236,15 +236,9 @@ def tps_cascade(V, B, parametre, l_T, a):
 
 ################ moyenne Energie apres cascade ################
 
-def moy_E(V, B, parametre, l_T, a):
+def moy_E(parametre, l_T, Ekn, t_c):
     T_max, time_moy = parametre[1], parametre[3]
 
-    EkV, EkB = E_kn(V, B, parametre)
-    Ekn = EkV + EkB
-    t_c, tau = tps_cascade(V, B, parametre, l_T, a)
-    print(f"cascade a t={t_c:.1f} s  =  {t_c/tau:.2f} tau")
-    print(f"tau:{tau} s")
-    
     debut = np.searchsorted(l_T, t_c)
     fin   = np.searchsorted(l_T, t_c + time_moy*T_max)
     moy_E_k_zone = np.mean(Ekn[debut:max(fin, debut+1)], axis=0)
@@ -275,18 +269,39 @@ def auto_label(cas, para):
     label = [cas] + [extrait[clee] for clee in extrait if clee in para]
     return ", ".join(label)  # voir doc python pour le fonctionnement de .join (long a expliquer)
 
+def auto_fit(k, Ek, k_min, k_max):
+    
+    condition = (k >= k_min) & (k <= k_max) # on ne peut pas juste faire un k_zone = k[k_min:k_max] malheureusement
+    k_zone = k[condition]
+    Ek_zone = Ek[condition]
+
+    if len(k_zone) < 2:
+        print("PROBLEME DE FIT, pas assez de point !!!!!!!!!!!!!!!!")
+        return Ek, None, 0
+    
+    else:
+        pente, origine = np.polyfit(np.log10(k_zone), np.log10(Ek_zone), 1)
+        Ek_fit = 10**origine * k_zone**pente
+        return Ek_fit, condition, pente
+
 
 def show_Inv(simulations, labels):
-    fig, axs = plt.subplots(3, sharex=True)
+    fig, axs = plt.subplots(3) 
     for (V, B, parametre, l_T), label in zip(simulations, labels):
         l_E, l_Hm, l_Hh = invariant(V, B, parametre)
         axs[0].plot(l_T, l_E, label=label, markersize=3)
         axs[1].plot(l_T, l_Hm, label=label, markersize=3)
         axs[2].plot(l_T, l_Hh, label=label, markersize=3)
+        
     axs[0].set_ylabel("E")
     axs[1].set_ylabel("Hm")
     axs[2].set_ylabel("Hh")
     axs[2].set_xlabel("t")
+    
+    if np.any(l_Hm != 0):
+        axs[1].set_xscale('log')
+        axs[1].set_yscale('symlog') # symlog permet de ne pas avoir le probleme avec les Hm = 0 et négatifs si ça varie autour de 0
+    
     for ax in axs:
         ax.legend(fontsize=8)
     fig.suptitle("Comparaison des invariants entre régimes (énergie, hélicité magnétique et hybride)")
@@ -296,11 +311,18 @@ def show_spectre(simulations, labels, pentes, mure):
     plt.figure()
     for (V, B, parametre, l_T), label, pente, mur in zip(simulations, labels, pentes, mure):
         k = parametre[2]
-        Ek = moy_E(V, B, parametre, l_T, mur)
+        EkV, EkB = E_kn(V, B, parametre)
+        Ekn = EkV + EkB
+        t_c, tau = tps_cascade(V, B, parametre, l_T, mur)
+        
+        Ek = moy_E(parametre, l_T, Ekn, t_c)
         Ek = liss_E(Ek)
         y = Ek*k**(-pente)
+        
         plt.plot(k, y, label=label, markersize=4)
-        plt.plot(k, [np.mean(y[10:15]) for i in range(len(k))], '--')
+        plt.plot(k, [np.mean(y[7:15]) for i in range(len(k))], '--')
+        print(f"cascade a t={t_c:.1f} s  =  {t_c/tau:.2f} tau")
+        print(f"tau:{tau} s")
 
     plt.xscale('log')
     plt.yscale('log')
@@ -319,3 +341,73 @@ def show_dt(liste, labels):
         plt.xlabel("t")
         plt.ylabel("pas d'intégration dt")
         plt.title("Evolution du pas d'intégration au cours du temps")
+
+def show_EVB(simulations, labels, pentes, mure):
+    plt.figure()
+
+    for (V, B, parametre, l_T), label, pente, mur in zip(simulations, labels, pentes, mure):
+        k, nom = parametre[2], parametre[11]
+        EkV, EkB = E_kn(V, B, parametre)
+        Ek = EkV + EkB
+
+        if nom in ["HMHD_s", "HMHD_b"]:
+            t_c = np.argmax(Ek <= 0.95)
+            
+            Ek_V = moy_E(parametre, l_T, EkV, t_c)
+            Ek_V = liss_E(Ek_V)
+            yV = Ek_V*k**(5/3)
+            
+            Ek_B = moy_E(parametre, l_T, EkB, t_c)
+            Ek_B = liss_E(Ek_B)
+            yB = Ek_B*k**(11/3)
+
+            plt.plot(k, yB, label=label, markersize=4)
+            plt.plot(k, [np.mean(yB[15:20]) for i in range(len(k))], '--')
+            plt.plot(k, yV, label=label, markersize=4)
+            plt.plot(k, [np.mean(yV[7:15]) for i in range(len(k))], '--')
+            print(f"cascade a t={t_c:.1f} s ")
+
+            Ek_fit, condition_fit, pente_fit = auto_fit(k, yB, 0.5, 200)
+            plt.plot(k[condition_fit], Ek_fit, '--', label=f" pente {pente_fit}")
+
+            package = (Ek_V, Ek_B, k)
+        
+        else:
+            t_c, tau = tps_cascade(V, B, parametre, l_T, mur)
+
+            E_k = moy_E(parametre, l_T, Ek, t_c)
+            E_k = liss_E(E_k)
+            y = E_k*k**(-pente)
+            
+            plt.plot(k, y, label=label, markersize=4)
+            plt.plot(k, [np.mean(y[7:15]) for i in range(len(k))], '--')
+            print(f"cascade a t={t_c:.1f} s  =  {t_c/tau:.2f} tau")
+            print(f"tau:{tau} s")
+
+            package = 0
+    
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel("nombre d'onde k (log)")
+    plt.ylabel("Spectre d'energie avec compensation pentes respectives (log)")
+    plt.title("Comparaison des spectres d'énergie entre régimes")
+    plt.ylim(10**-25, 10**3)
+    plt.legend(fontsize=8)
+    
+    return package
+
+def ratio_EB(package):
+    Ek_V, Ek_B, k = package[0], package[1], package[2]
+    plt.figure()
+    
+    y = Ek_V/Ek_B
+    plt.plot(k, y)
+    plt.plot(k, [y[3] for i in range(len(k))], '--')
+
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel("nombre d'onde k (log)")
+    plt.ylabel("$E^u / E^b$")
+    plt.title("Ratio entre l'énergie cinétique et magnétique")
+    plt.ylim(10**-5, 10**3)
+            
