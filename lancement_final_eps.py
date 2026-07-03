@@ -1,4 +1,4 @@
-import fonctions_finales_bis as ff
+import fonctions_finales_eps as ff
 import numpy as np
 import matplotlib.pyplot as plt
 
