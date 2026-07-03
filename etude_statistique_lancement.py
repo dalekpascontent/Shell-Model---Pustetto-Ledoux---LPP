@@ -11,7 +11,7 @@ lissage = True
 ############### Paramètres de simulation #############
 
 regimes = {
-    "HD": {"N": 25, "T_max": 300, "i": 2, "CFL": 0.05, "mur": 0.05, "Umoyen": 1, "Bmoyen": 0, "di": 0, "nu": 1e-13, "eta": 1e-13},
+    "MHD": {"N": 25, "T_max": 500, "i": 3, "CFL": 0.05, "mur": 0.05, "Umoyen": 1, "Bmoyen": 1, "di": 0, "nu": 1e-12, "eta": 1e-12},
 }
 
 """
