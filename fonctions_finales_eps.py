@@ -352,12 +352,12 @@ def show_dt(liste, labels):
 
 def show_EVB(simulations, labels, pentes, mure):
     plt.figure()
-
+    liste_package = []
     for (V, B, parametre, l_T), label, pente, mur in zip(simulations, labels, pentes, mure):
         k, nom = parametre[2], parametre[11]
         EkV, EkB = E_kn(V, B, parametre)
         Ek = EkV + EkB
-
+        
         if nom in ["HMHD_s", "HMHD_b"]:
             t_c = np.argmax(Ek <= 0.95)
             
@@ -378,7 +378,7 @@ def show_EVB(simulations, labels, pentes, mure):
             Ek_fit, condition_fit, pente_fit = auto_fit(k, yB, 0.5, 200)
             plt.plot(k[condition_fit], Ek_fit, '--', label=f" pente {pente_fit}")
 
-            package = (Ek_V, Ek_B, k)
+            liste_package.append([Ek_V, Ek_B])
         
         else:
             t_c, tau = tps_cascade(V, B, parametre, l_T, mur)
@@ -392,7 +392,9 @@ def show_EVB(simulations, labels, pentes, mure):
             print(f"cascade a t={t_c:.1f} s  =  {t_c/tau:.2f} tau")
             print(f"tau:{tau} s")
 
-            package = 0
+            liste_package.append(E_k)
+            
+    
     
     plt.xscale('log')
     plt.yscale('log')
@@ -402,10 +404,11 @@ def show_EVB(simulations, labels, pentes, mure):
     plt.ylim(10**-25, 10**3)
     plt.legend(fontsize=8)
     
-    return package
+    
+    return liste_package
 
-def ratio_EB(package):
-    Ek_V, Ek_B, k = package[0], package[1], package[2]
+def ratio_EB(package,parametre):
+    Ek_V, Ek_B, k = package[0], package[1], parametre[2]
     plt.figure()
     
     y = Ek_V/Ek_B
@@ -418,7 +421,6 @@ def ratio_EB(package):
     plt.ylabel("$E^u / E^b$")
     plt.title("Ratio entre l'énergie cinétique et magnétique")
     plt.ylim(10**-5, 10**3)
-    
     
 def visu_casc(simulations, labels, pentes, mure):
     # https://matplotlib.org/stable/gallery/mplot3d/surface3d.html
@@ -457,4 +459,81 @@ def visu_casc(simulations, labels, pentes, mure):
         # ax.set_zscale('symlog')
         plt.show()
 
-            
+def etude_stat(liste_package, parametre, pente, mur):
+    plt.figure()
+    nom = parametre[11]
+    k = parametre[2]
+    if nom in ["HMHD_s", "HMHD_b"]:
+        liste_Ek = np.array([liste_package[i][0] +liste_package[i][1] for i in range(len(liste_package))])
+        moyenne_V  = np.zeros(len(liste_package[0][0]))
+        moyenne_B  = np.zeros(len(liste_package[0][1]))
+        for i in range (len(liste_package[0][0])) : 
+            moyenne_V += liste_package[i][0]
+            moyenne_V += liste_package[i][1]
+        moyenne_V = moyenne_V/len(liste_package[0][0])
+        moyenne_B = moyenne_B/len(liste_package[0][0])
+        package_moy = [ moyenne_V, moyenne_B]
+    else : 
+        liste_Ek = np.array(liste_package)
+        
+    moyenne  = np.zeros(len(liste_Ek[0]))
+    for i in range (len(liste_Ek)) : 
+        moyenne += liste_Ek[i]
+    moyenne = moyenne/len(liste_Ek)
+    var = np.zeros(len(moyenne))
+    
+    print(liste_Ek)
+    mp = np.zeros(len(moyenne))
+    mm = np.zeros(len(moyenne))
+    for i in range (len(liste_Ek[0])):
+        mp[i] = np.max(liste_Ek[:,i])
+        mm[i] = np.min(liste_Ek[:,i])
+    
+    inc_p = np.abs(mp - moyenne)
+    inc_m = np.abs(moyenne - mm)
+    
+    # for i in range(len(moyenne)) : 
+    #     for j in range(len(liste_Ek)):
+    #         var[i] += ((liste_Ek[j][i] - moyenne[i] )**2)/len(liste_Ek)
+    # sigma = np.sqrt(np.array(var))
+    
+    sigma = np.array( [abs(np.sqrt(mm[i]*moyenne[i])) for i in range(len(moyenne))])
+    package_moy = []
+    
+    #fit_moy, cond, pent_moy = auto_fit(k,moyenne,10**(2),10**(4))
+    fit_moy, cond, pent_moy, ori, cov= auto_fit(k,moyenne,sigma,10**(-1),10**(3))
+    y = moyenne*k**(-pente)
+    y_moy = 10**ori * k**pent_moy *k**(-pente)
+    
+    # moy_p = moyenne + sigma 
+    # moy_m = moyenne - sigma 
+    yp = mp*k**(-pente)
+    ym = mm*k**(-pente)
+    
+    # y = moyenne
+    # y_moy = 10**ori * k**pent_moy
+    plt.plot(k, y, markersize = 3)
+    
+    plt.plot(k, yp, markersize = 3)
+    plt.plot(k, ym, markersize = 3)
+    
+    # print(moyenne)
+    # print(sigma)
+    # print(ym)
+    
+    #plt.errorbar(k,y,yerr = sigma*(1/y), markersize = 3)
+    #plt.plot(k, [np.mean(y[6:15]) for i in range(len(k))], '--')
+    lab = 'coefficient  : ', round(pent_moy.item(),4) ,'pm', round(np.sqrt(cov[0][0]).item(),4)
+    plt.plot(k, y_moy, '--', label = lab)
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel("nombre d'onde k (log)")
+    plt.ylabel("Spectre d'energie  moyen (log)")
+    plt.title("Spectre moyen après plusieurs simulations")
+    plt.ylim(10**-25, 10**1)
+    plt.legend(fontsize=8)
+    
+    print("zscore =", abs((pente - pent_moy)/np.sqrt(cov[0][0]).item()))
+    package_moy.append(moyenne)
+    
+    return package_moy
