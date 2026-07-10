@@ -49,12 +49,15 @@ def var_visc(dt, constante, activer, nu, eta):
     else:
         return nu, eta
 
-############### Helicité cinétique et CI liées #####################
+############### Helicité cinétique et CI liées #####################  /!\ WORK IN PROGRESS (sert a rien pour l'instant)
+
+""" Le but serait d'inverser l'expression de Hm et Hc pour avoir les U et B initiaux a 
+mettre si on veut initialement Hc et Hb d'une certaine vaelur"""
 
 def Hc(U, parametre):
     k = parametre[2]
 
-    terme = k * (np.conj(U)**2 - np.abs(U)**2)
+    terme = k * (np.conj(U)**2 - U**2)
     Hc = 1j/2 * np.sum(terme, axis=1)
     return Hc
 
@@ -399,7 +402,9 @@ def auto_label(cas, para):
         "eta": f"$\\eta={para["eta"]}$",
         "i": f"$centre={para["i"]}$",
         "N": f"$N={para["N"]}$",
-        "M": f"$M={para["M"]}$"
+        "M": f"$M={para["M"]}$",
+        "eps": f"$\\epsilon={para["eps"]}$",
+        "constante": f"$c={para["constante"]}$"
     }
     label = [cas] + [extrait[clee] for clee in extrait if clee in para]
     return ", ".join(label)  # voir doc python pour le fonctionnement de .join (long a expliquer)
@@ -498,6 +503,9 @@ def show_EVB(simulations, labels, pentes, kdi, l_tau_tc):
             Ek_fit, condition_fit, pente_fit = auto_fit(k, yB, 0.5, 200)
             plt.plot(k[condition_fit], Ek_fit, '--', label=f" pente {pente_fit}")
             plt.axvline(x=k_di,color='gray',linestyle='--', label = "kdi = 1")
+
+            Ek_fit, condition_fit, pente_fit = auto_fit(k, yB, 700, 11000)
+            plt.plot(k[condition_fit], Ek_fit, '--', label=f" pente {pente_fit}")
 
             package = (Eu, Eb, k)
         
