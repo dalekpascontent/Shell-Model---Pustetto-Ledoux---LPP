@@ -12,17 +12,25 @@ lissage = True
 ############### Paramètres de simulation #############
 
 regimes = {
-    "EMHD": {"N": 50, "T_max": 3000, "i": 6, "CFL": 0.4, "delta": 0.05, 
-             "Umoyen": 0, "Bmoyen": 1, "di": 0.3, "nu": 1e-10, "eta": 1e-10, 
-             "eps": 2, "M": 30, "constante": 1e-15, "visc_var": True},
+    "HMHD_s": {"N": 50, "T_max": 300, "i": 4, "CFL": 0.4, "delta": 0.05, 
+             "Umoyen": 1, "Bmoyen": 1, "di": 0.3, "nu": 1e-11, "eta": 1e-11, 
+             "eps": 2, "M": 30, "constante": 1e-16, "visc_var": True},
 }
 
 """
 regimes = {
     "HD": {"N": 25, "T_max": 300, "i": 2, "CFL": 0.05, "delta": 0.05, "Umoyen": 1, "Bmoyen": 0, "di": 0, "nu": 1e-13, "eta": 1e-13, "eps": 1, "M": 30, "constante": 1e-18},
+    
     "MHD": {"N": 25, "T_max": 400, "i": 3, "CFL": 0.1, "mur": 0.05, "Umoyen": 1, "Bmoyen": 1, "di": 0, "nu": 1e-12, "eta": 1e-12},
-    "EMHD": {"N": 23, "T_max": 400, "i": 5, "CFL": 0.4, "delta": 0.05, "Umoyen": 0, "Bmoyen": 1, "di": 0.3, "nu": 1e-13, "eta": 1e-13, "eps": 1, "M": 30, "constante": 1e-17},
-    "HMHD_s": {"N": 25, "T_max": 300, "i": 4, "CFL": 0.4, "delta": 0.05, "Umoyen": 1, "Bmoyen": 1, "di": 0.3, "nu": 1e-13, "eta": 1e-13, "eps": 1, "M": 30},
+    
+    "EMHD": {"N": 50, "T_max": 3000, "i": 6, "CFL": 0.4, "delta": 0.05, 
+            "Umoyen": 0, "Bmoyen": 1, "di": 0.3, "nu": 1e-10, "eta": 1e-10, 
+            "eps": 2, "M": 30, "constante": 1e-15, "visc_var": True},
+    
+    "HMHD_s": {"N": 50, "T_max": 300, "i": 4, "CFL": 0.4, "delta": 0.05, 
+            "Umoyen": 1, "Bmoyen": 1, "di": 0.3, "nu": 1e-11, "eta": 1e-11, 
+            "eps": 2, "M": 30, "constante": 1e-16, "visc_var": True},
+    
     "HMHD_b": {"N": 27, "T_max": 100, "i": 3, "CFL": 0.4, "mur": 0.05, "Umoyen": 1, "Bmoyen": 1, "di": 30, "nu": 1e-9, "eta": 1e-9}
 }
 """
@@ -67,7 +75,7 @@ for cas, para in regimes.items():
 
     V_nul = (cas == "EMHD")
 
-    for j in range(3):
+    for j in range(5):
         print(f"Simulation {cas} numéro {j}...")
 
         U, B, l_T, liste_dt, visc = ff.run_simu(parametre, nb_sauvegarde, V_nul)
